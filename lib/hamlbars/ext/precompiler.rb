@@ -13,7 +13,7 @@ module Hamlbars
       def hb_template_js_with_precompiler(template)
         if self.class.precompiler_enabled? 
           precompiledTemplate = runtime.call('precompileEmberHandlebars', template)
-          "Em.Handlebars.template(#{precompiledTemplate})"
+          "Handlebars.template(#{precompiledTemplate})"
         else
           hb_template_js_without_precompiler(template)
         end
