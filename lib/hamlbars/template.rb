@@ -83,28 +83,42 @@ module Hamlbars
       options = @options.merge(:filename => eval_file, :line => line)
       @engine = ::Haml::Engine.new(data, options)
     end
-
+    
+    def hb_path
+      @scope.try(:logical_path) || basename
+    end
+    
+    def hb_template_path
+      self.class.path_translator hb_path
+    end
+    
+    def hb_partial_path
+      partial_path_translator hb_path
+    end
+    
+    def hb_render_template(locals, &block)
+      @engine.render(@scope, locals, &block)
+    end
+    
+    def hb_partial?
+      basename =~ /^_/
+    end
+    
+    def hb_template_var
+      "#{self.class.template_destination}['#{hb_template_path}']"
+    end
+    
+    def hb_template_js(template)
+      "#{self.class.template_compiler}(\"#{template.strip.gsub(/(\r\n|[\n\r"'])/) { JS_ESCAPE_MAP[$1] }}\")"
+    end
+    
     # Uses Haml to render the template into an HTML string, then 
     # wraps it in the neccessary JavaScript to serve to the client.
     def evaluate(scope, locals, &block)
-      template = if @engine.respond_to?(:precompiled_method_return_value, true)
-                   super(scope, locals, &block)
-                 else
-                   @engine.render(scope, locals, &block)
-                 end
-
-      if scope.respond_to? :logical_path
-        path = scope.logical_path
-      else
-        path = basename
-      end
-
-      if basename =~ /^_/
-        name = partial_path_translator(path)
-        "#{self.class.template_partial_method}('#{name}', '#{template.strip.gsub(/(\r\n|[\n\r"'])/) { JS_ESCAPE_MAP[$1] }}');\n"
-      else
-        name = self.class.path_translator(path)
-        "#{self.class.template_destination}[\"#{name}\"] = #{self.class.template_compiler}(\"#{template.strip.gsub(/(\r\n|[\n\r"'])/) { JS_ESCAPE_MAP[$1] }}\");\n"
+      @scope = scope
+      template = hb_render_template locals, &block
+      "#{hb_template_var} = #{hb_template_js template};\n".tap do |text|
+        text += "#{self.class.template_partial_method}('#{hb_partial_path}', #{hb_template_var});" if hb_partial?
       end
     end
 
