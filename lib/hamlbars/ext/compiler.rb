@@ -24,7 +24,7 @@ module Haml
         attributes[:events].each do |event|
           event[:on] = event.delete('on') || event.delete(:on) || 'click'
           action = event.delete('action') || event.delete(:action)
-          context = event.delete('context') || event.delete(:action)
+          context = event.delete('context') || event.delete(:context)
           action_string = "action #{action}"
           action_string += " #{context}" if context
           handlebars_rendered_attributes << handlebars_attributes(action_string, event)
